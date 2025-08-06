@@ -231,4 +231,8 @@ for epoch in range(args.initial_epoch, args.epochs):
     print(' - '.join((epoch_info, time_info, loss_info)), flush=True)
 
 # final model save
-model.save(os.path.join(model_dir, '%04d.pt' % args.epochs))
+# only weights: '%04d.pt' % args.epochs
+# the whole model: model_full
+# torch.save(model.state_dict(), os.path.join(model_dir,'%04d.pt' % args.epochs))
+torch.save(model, os.path.join(model_dir, 'model_full.pt'))
+
