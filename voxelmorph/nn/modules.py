@@ -36,7 +36,7 @@ class SpatialTransformer(nn.Module):
         size: Tuple[int],
         interpolation_mode: str = "bilinear",
         align_corners: bool = False,
-        device: Union[str, torch.device] = "cpu",
+        device: Union[str, torch.device] = "cuda",
     ):
         """
         Initialize `SpatialTransformer`.
@@ -62,11 +62,34 @@ class SpatialTransformer(nn.Module):
 
         # Make identity grid (the grid to later warp with deformation field) and register as a
         # buffer (without saving to `state_dict`: persistent=False)
+        # self.register_buffer(
+        #     name='identity_grid',
+        #     tensor=ne.utils.utils.grid(size=size, device=device),
+        #     persistent=False  # Don't save to this module's state dict!
+        # )
         self.register_buffer(
-            name='identity_grid',
-            tensor=ne.utils.utils.grid(size=size, device=device),
-            persistent=False  # Don't save to this module's state dict!
-        )
+        name='identity_grid',
+        tensor=self.create_identity_grid(),  # or use self.device if defined
+        persistent=False
+)
+
+
+
+    def create_identity_grid(self):
+        """
+        Create an identity grid for spatial transformer warping.
+        Args:
+            size: tuple of ints, spatial dimensions (e.g., (H, W) for 2D, (D, H, W) for 3D)
+            device: torch device (defaults to current device if None)
+            dtype: tensor dtype (defaults to float32)
+        Returns:
+            grid: Tensor of shape (*size, len(size)), in native voxel coordinates
+        """
+        coords = [torch.arange(s, device=self.device, dtype=torch.float32) for s in self.size]
+        mesh = torch.meshgrid(*coords, indexing='ij')  # 'ij' is safest for numpy/PyTorch convention
+        grid = torch.stack(mesh, dim=-1)
+        return grid
+
 
     def forward(
         self,
@@ -189,7 +212,7 @@ class IntegrateVelocityField(nn.Module):
         steps: int = 1,
         interpolation_mode: str = "bilinear",
         align_corners: bool = False,
-        device: str = "cpu"
+        device: str = "cuda"
     ):
         """
         Initialize `IntegrateVelocityField`
