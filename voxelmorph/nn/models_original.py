@@ -15,8 +15,6 @@ import neurite as ne
 
 # Custom imports
 import voxelmorph as vxm
-from neurite.nn import modules
-from neurite.nn import models
 
 
 class VxmDeformable(nn.Module):
@@ -83,7 +81,7 @@ class VxmDeformable(nn.Module):
         bidirectional_cost: bool = False,
         integration_steps: int = 0,
         resize_integrated_fields: bool = False,
-        device: str = "cuda",
+        device: str = "cpu",
     ):
 
         """
@@ -136,7 +134,7 @@ class VxmDeformable(nn.Module):
 
         # Set derived attrs
         self._init_flow_layer(ndim, out_channels, flow_initializer)
-        self.model = models.BasicUNet(
+        self.model = ne.models.BasicUNet(
             ndim=ndim, in_channels=in_channels, out_channels=out_channels, nb_features=nb_features,
             normalizations=normalizations, activations=activations, order=order,
             final_activation=final_activation
@@ -257,26 +255,23 @@ class VxmDeformable(nn.Module):
         """
 
         # Initialize the conv ("flow") layer with congruent in and out features
-        flow_layer = modules.ConvBlock(ndim, features, features).to(self.device)
+        flow_layer = ne.modules.ConvBlock(ndim, features, features).to(self.device)
 
         # Optionally, apply custom initialization if `flow_initializer`` is provided
         if flow_initializer is not None:
 
             # Make the distribution to sample the flow parameters
             flow_initializer = ne.samplers.Fixed.make(flow_initializer)
-            init_weight = flow_initializer(flow_layer.conv0.weight.shape).to(self.device)
-            flow_layer.conv0.weight = nn.Parameter(init_weight)
+
             # Sample the weight parameters from the distribution for first (and only) conv
-            # flow_layer.conv0.weight = nn.Parameter(
-            #     flow_initializer(flow_layer.conv0.weight.shape)
-            # ).to(self.device)
+            flow_layer.conv0.weight = nn.Parameter(
+                flow_initializer(flow_layer.conv0.weight.shape)
+            ).to(self.device)
 
             # Set the bias term(s) to zero for the first (and only) conv
-            # flow_layer.conv0.bias = nn.Parameter(
-            #     torch.zeros(flow_layer.conv0.bias.shape)
-            # ).to(self.device)
-            init_bias = torch.zeros(flow_layer.conv0.bias.shape, device=self.device)
-            flow_layer.conv0.bias = nn.Parameter(init_bias)
+            flow_layer.conv0.bias = nn.Parameter(
+                torch.zeros(flow_layer.conv0.bias.shape)
+            ).to(self.device)
 
         # Register the flow layer as a submodule
         self.add_module("flow_layer", flow_layer)
