@@ -47,6 +47,7 @@ os.environ['VXM_BACKEND'] = 'pytorch'
 
 # Custom imports
 import voxelmorph as vxm   # nopep8
+from voxelmorph.nn import models as vxm_models
 
 # parse commandline args
 parser = argparse.ArgumentParser()
@@ -75,7 +76,18 @@ fixed, fixed_affine = vxm.py.utils.load_volfile(
     args.fixed, add_batch_axis=True, add_feat_axis=add_feat_axis, ret_affine=True)
 
 # load and set up model
-model = vxm.networks.VxmDense.load(args.model, device)
+# model = vxm_models.VxmDeformable.load(args.model, device)
+# model.to(device)
+# model.eval()
+
+model = vxm_models.VxmDeformable(
+    ndim=3,
+    in_channels=2,
+    out_channels=3,
+    nb_features=[4, 2, 64, 64, 22],  
+
+)
+model.load_state_dict(torch.load(args.model, map_location=device))
 model.to(device)
 model.eval()
 
