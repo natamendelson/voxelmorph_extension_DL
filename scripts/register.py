@@ -96,7 +96,8 @@ input_moving = torch.from_numpy(moving).to(device).float().permute(0, 4, 1, 2, 3
 input_fixed = torch.from_numpy(fixed).to(device).float().permute(0, 4, 1, 2, 3)
 
 # predict
-moved, warp = model(input_moving, input_fixed, registration=True)
+# moved, warp = model(input_moving, input_fixed, registration=True)
+moved, warp = model(input_moving, input_fixed)
 
 # save moved image
 if args.moved:
