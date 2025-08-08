@@ -1,0 +1,10 @@
+converted_npz/fsm_t1_02cd.npz 
+converted_npz/fsm_t1_21em.npz 
+converted_npz/fsm_t1_24dz.npz 
+converted_npz/fsm_t1_42wk.npz 
+converted_npz/fsm_t1_50ww.npz 
+converted_npz/fsm_t1_54jc.npz 
+converted_npz/fsm_t1_70qy.npz 
+converted_npz/fsm_t1_85fp.npz 
+converted_npz/fsm_t1_90ao.npz 
+converted_npz/fsm_t1_96ry.npz
