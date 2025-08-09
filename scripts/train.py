@@ -45,7 +45,7 @@ os.environ['NEURITE_BACKEND'] = 'pytorch'
 os.environ['VXM_BACKEND'] = 'pytorch'
 import voxelmorph as vxm  # nopep8
 from voxelmorph.py import generators as vxm_gens
-from voxelmorph_extension_DL.voxelmorph.nn import models as vxm_models
+from voxelmorph.nn import models as vxm_models
 from voxelmorph.nn import losses as vxm_losses
 
 # parse the commandline
@@ -182,6 +182,7 @@ losses += [vxm_losses.Grad('l2', loss_mult=args.int_downsize).loss]
 weights += [args.weight]
 
 # training loops
+all_epoch_total_loss = [] #<<<<
 for epoch in range(args.initial_epoch, args.epochs):
 
     # save model checkpoint
@@ -229,10 +230,13 @@ for epoch in range(args.initial_epoch, args.epochs):
     losses_info = ', '.join(['%.4e' % f for f in np.mean(epoch_loss, axis=0)])
     loss_info = 'loss: %.4e  (%s)' % (np.mean(epoch_total_loss), losses_info)
     print(' - '.join((epoch_info, time_info, loss_info)), flush=True)
-
+    all_epoch_total_loss.append(np.mean(epoch_total_loss)) #<<<<
 # final model save
 # only weights: '%04d.pt' % args.epochs
 # the whole model: model_full
 # torch.save(model.state_dict(), os.path.join(model_dir,'%04d.pt' % args.epochs))
 torch.save(model, os.path.join(model_dir, 'model_full.pt'))
 
+with open(os.path.join(model_dir, 'loss_history.txt'), 'w') as f:   #<<<<<
+    for loss in all_epoch_total_loss:
+        f.write(f"{loss}\n")
