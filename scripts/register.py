@@ -84,7 +84,7 @@ model = vxm_models.VxmDeformable(
     ndim=3,
     in_channels=2,
     out_channels=3,
-    nb_features=[4, 2, 64, 64, 22],  
+    nb_features=[4, 2, 265, 265, 265],  
 
 )
 model.load_state_dict(torch.load(args.model, map_location=device))
