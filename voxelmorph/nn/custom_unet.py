@@ -3,7 +3,38 @@ import torch
 import os
 import numpy as np
 from datetime import datetime
+# from voxelmorph.nn.attention import SpatialAttention3D
+from voxelmorph.nn.attention import SelfAttention3D
+
 class CustomUNet(models.BasicUNet):
+    def __init__(self, *args, use_attention=True, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+        nb_features = kwargs.get('nb_features', getattr(self, 'nb_features', None))
+        if nb_features is None:
+            in_ch_bottleneck = 22
+        else:
+            in_ch_bottleneck = nb_features[-1]
+
+        # attention
+
+        self.use_attention = use_attention
+
+        # if self.use_attention:
+        #     self.bottleneck_attention = SpatialAttention3D(
+        #         in_channels=in_ch_bottleneck,
+        #         inter_channels=max(1, in_ch_bottleneck // 2)
+        #     )
+        if self.use_attention:
+            self.bottleneck_attention = SelfAttention3D(
+                in_channels=in_ch_bottleneck,
+                heads=4,  # אפשר לשחק עם מספר הראשים
+                dim_head=16  # גודל כל ראש
+            )
+
+
+
     def forward(self, feature_tensor: torch.Tensor):
         """
         Forward pass through the `BasicUNet` model.
@@ -32,13 +63,19 @@ class CustomUNet(models.BasicUNet):
         # Convolutional block between downsampling and upsampling arms (lowest resolution)
         feature_tensor = self.lowest_resolution_conv_block(feature_tensor)  # bottleneck
 
+        # attention
+
+
         if not self.training:
             try:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                # base_dir = os.path.join("..", "data")
                 base_dir = r"..\data"
-                # output_dir = os.path.join(base_dir, f"output_{timestamp}")
-                output_dir = os.path.join(base_dir, "outputs")
+                print("Use attention:", self.use_attention)
+                if self.use_attention:
+                    feature_tensor = self.bottleneck_attention(feature_tensor)
+                    output_dir = os.path.join(base_dir, "outputs_attention")
+                else:
+                    output_dir = os.path.join(base_dir, "outputs")
                 os.makedirs(output_dir, exist_ok=True)
                 bottleneck_np = feature_tensor.detach().cpu().numpy()
 
