@@ -154,7 +154,7 @@ class VxmDeformable(nn.Module):
         self.model = CustomUNet(
             ndim=ndim, in_channels=in_channels, out_channels=out_channels, nb_features=nb_features,
             normalizations=normalizations, activations=activations, order=order,
-            final_activation=final_activation, use_attention=True
+            final_activation=final_activation, use_bottleneck_attention=False, use_skip_attention=False,
         )
         self.bottle_neck = bottle_neck_flag
 

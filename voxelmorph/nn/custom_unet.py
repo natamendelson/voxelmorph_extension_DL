@@ -3,13 +3,17 @@ import torch
 import os
 import numpy as np
 from datetime import datetime
-# from voxelmorph.nn.attention import SpatialAttention3D
+from voxelmorph.nn.attention import SpatialAttention3D
 from voxelmorph.nn.attention import SelfAttention3D
 
 class CustomUNet(models.BasicUNet):
-    def __init__(self, *args, use_attention=True, **kwargs):
+    def __init__(
+            self, *args,
+            use_bottleneck_attention=False,
+            use_skip_attention=False,
+            **kwargs
+    ):
         super().__init__(*args, **kwargs)
-
 
         nb_features = kwargs.get('nb_features', getattr(self, 'nb_features', None))
         if nb_features is None:
@@ -18,68 +22,60 @@ class CustomUNet(models.BasicUNet):
             in_ch_bottleneck = nb_features[-1]
 
         # attention
+        self.use_bottleneck_attention = use_bottleneck_attention
+        self.use_skip_attention = use_skip_attention
 
-        self.use_attention = use_attention
-
-        # if self.use_attention:
-        #     self.bottleneck_attention = SpatialAttention3D(
-        #         in_channels=in_ch_bottleneck,
-        #         inter_channels=max(1, in_ch_bottleneck // 2)
-        #     )
-        if self.use_attention:
+        # attention bottleneck
+        if self.use_bottleneck_attention:
             self.bottleneck_attention = SelfAttention3D(
                 in_channels=in_ch_bottleneck,
-                heads=4,  # אפשר לשחק עם מספר הראשים
-                dim_head=16  # גודל כל ראש
+                heads=4,
+                dim_head=16
             )
 
-
+        # attention skip connections
+        if self.use_skip_attention:
+            self.skip_attentions = torch.nn.ModuleList([
+                SpatialAttention3D(
+                    in_channels=block.out_channels if hasattr(block, 'out_channels') else 22
+                ) for block in self.downsampling_conv_blocks
+            ])
 
     def forward(self, feature_tensor: torch.Tensor):
-        """
-        Forward pass through the `BasicUNet` model.
-
-        Parameters
-        ----------
-        feature_tensor : torch.Tensor
-            Tensor to be passed through the model. Assumed to have batch and channel dimensions.
-
-        Returns
-        -------
-        torch.Tensor
-            Result of forward pass of the model.
-        """
-
-        # Downsampling path
         skip_connections = []
 
-        for downsampling_conv_block in self.downsampling_conv_blocks:
+        for i, down_block in enumerate(self.downsampling_conv_blocks):
             if self.residual_connections:
-                feature_tensor, residual = downsampling_conv_block(feature_tensor)
-                skip_connections.append(residual)  # Save for skip connection
+                feature_tensor, residual = down_block(feature_tensor)
+
+                # attention skip connections
+                if self.use_skip_attention:
+                    residual = self.skip_attentions[i](residual)
+
+                skip_connections.append(residual)
             else:
-                feature_tensor = downsampling_conv_block(feature_tensor)
+                feature_tensor = down_block(feature_tensor)
 
-        # Convolutional block between downsampling and upsampling arms (lowest resolution)
-        feature_tensor = self.lowest_resolution_conv_block(feature_tensor)  # bottleneck
+        # bottleneck
+        feature_tensor = self.lowest_resolution_conv_block(feature_tensor)
 
-        # attention
+        # attention bottleneck
+        if self.use_bottleneck_attention:
+            feature_tensor = self.bottleneck_attention(feature_tensor)
 
 
         if not self.training:
             try:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 base_dir = r"..\data"
-                print("Use attention:", self.use_attention)
-                if self.use_attention:
+                # print("Use attention:", self.use_bottleneck_attention)
+                if self.uuse_bottleneck_attention:
                     feature_tensor = self.bottleneck_attention(feature_tensor)
                     output_dir = os.path.join(base_dir, "outputs_attention")
                 else:
                     output_dir = os.path.join(base_dir, "outputs")
                 os.makedirs(output_dir, exist_ok=True)
                 bottleneck_np = feature_tensor.detach().cpu().numpy()
-
-
                 filename = os.path.join(output_dir, f"bottleneck_features_{timestamp}.npy")
                 np.save(filename, bottleneck_np)
                 print(f"Bottleneck features saved to {filename}, with shape {bottleneck_np.shape}")

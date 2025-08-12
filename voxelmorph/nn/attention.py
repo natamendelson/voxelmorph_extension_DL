@@ -42,38 +42,26 @@ class SelfAttention3D(nn.Module):
 
 
 
+class SpatialAttention3D(nn.Module):
+    """
+    Simple spatial attention for 3D feature maps.
+    Input: (B, C, D, H, W)
+    Output: same shape, but features reweighted by a spatial attention map (single channel).
+    """
 
+    def __init__(self, in_channels: int, inter_channels: int = None):
+        super().__init__()
+        if inter_channels is None:
+            inter_channels = max(1, in_channels // 2)
+        # 1x1x1 conv to reduce channels -> nonlinearity -> 1x1x1 conv to single attention map
+        self.attn = nn.Sequential(
+            nn.Conv3d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv3d(inter_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.Sigmoid()
+        )
 
-
-
-
-
-
-
-
-# import torch
-# import torch.nn as nn
-
-# class SpatialAttention3D(nn.Module):
-#     """
-#     Simple spatial attention for 3D feature maps.
-#     Input: (B, C, D, H, W)
-#     Output: same shape, but features reweighted by a spatial attention map (single channel).
-#     """
-#
-#     def __init__(self, in_channels: int, inter_channels: int = None):
-#         super().__init__()
-#         if inter_channels is None:
-#             inter_channels = max(1, in_channels // 2)
-#         # 1x1x1 conv to reduce channels -> nonlinearity -> 1x1x1 conv to single attention map
-#         self.attn = nn.Sequential(
-#             nn.Conv3d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=True),
-#             nn.ReLU(inplace=True),
-#             nn.Conv3d(inter_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
-#             nn.Sigmoid()
-#         )
-#
-#     def forward(self, x: torch.Tensor) -> torch.Tensor:
-#         # x: (B, C, D, H, W)
-#         map_ = self.attn(x)    # (B, 1, D, H, W)
-#         return x * map_       # broadcast multiply
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, C, D, H, W)
+        map_ = self.attn(x)    # (B, 1, D, H, W)
+        return x * map_       # broadcast multiply
