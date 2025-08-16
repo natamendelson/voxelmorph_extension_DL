@@ -41,7 +41,7 @@ This fork introduces several modifications and enhancements to the original Voxe
 
 This section explains how to run the code and the purpose of each file.
 
-### Loading the data
+### Data Access 
 - **File:** `extension/load_data.ipynb`  
 - **Purpose:** This notebook is used to download the data that we used in our project.
 
@@ -131,6 +131,7 @@ This section explains how to run the code and the purpose of each file.
 - The final model is saved as `models/{number of epochs}.pt`.  
 
 - Intermediate checkpoints are saved every 20 epochs.
+
 
 
 
