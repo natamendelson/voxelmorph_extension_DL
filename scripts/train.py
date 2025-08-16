@@ -39,14 +39,17 @@ import argparse
 import time
 import numpy as np
 import torch
+from torch.optim.lr_scheduler import CyclicLR
 
 # import voxelmorph with pytorch backend
 os.environ['NEURITE_BACKEND'] = 'pytorch'
 os.environ['VXM_BACKEND'] = 'pytorch'
 import voxelmorph as vxm  # nopep8
 from voxelmorph.py import generators as vxm_gens
-from voxelmorph_extension_DL.voxelmorph.nn import models as vxm_models
+from voxelmorph.nn import models as vxm_models
 from voxelmorph.nn import losses as vxm_losses
+from add_noise import add_gaussian_noise
+
 
 # parse the commandline
 parser = argparse.ArgumentParser()
@@ -108,8 +111,8 @@ if args.atlas:
     atlas = vxm.py.utils.load_volfile(args.atlas, np_var='vol',
                                       add_batch_axis=True, add_feat_axis=add_feat_axis)
     generator = vxm_gens.scan_to_atlas(train_files, atlas,
-                                             batch_size=args.batch_size, bidir=args.bidir,
-                                             add_feat_axis=add_feat_axis)
+                                       batch_size=args.batch_size, bidir=args.bidir,
+                                       add_feat_axis=add_feat_axis)
 else:
     # scan-to-scan generator
     generator = vxm_gens.scan_to_scan(
@@ -143,10 +146,10 @@ if args.load_model:
 else:
     # otherwise configure new model
     model = vxm_models.VxmDeformable(
-        ndim=3,                # set to 2 for 2D, 3 for 3D
-        in_channels=2,         # moving and fixed images as channels
-        out_channels=3,        # 3 for 3D field, 2 for 2D
-        nb_features=[4, 2, 64, 64, 22]  # adjust as preferred: [batch_size, 2, D, H, W](batch, channels, depth, height, width).
+        ndim=3,                 # set to 2 for 2D, 3 for 3D
+        in_channels=2,          # moving and fixed images as channels
+        out_channels=3,         # 3 for 3D field, 2 for 2D
+        nb_features=[4, 8, 16, 32, 64]
     )
 
 if nb_gpus > 1:
@@ -161,11 +164,24 @@ model.train()
 # set optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
+# Add cyclic learning rate scheduler
+# scheduler = CyclicLR(
+#     optimizer,
+#     base_lr=args.lr * 0.1,
+#     max_lr=args.lr * 10,
+#     step_size_up=2 * args.steps_per_epoch,  # rising half of cycle (e.g., 2 epochs)
+#     mode='triangular2'  # CLR policy
+# )
+
 # prepare image loss
 if args.image_loss == 'ncc':
     image_loss_func = vxm_losses.NCC().loss
 elif args.image_loss == 'mse':
     image_loss_func = vxm_losses.MSE().loss
+elif args.image_loss == 'ssim':
+    image_loss_func = vxm_losses.SSIM().loss
+elif args.image_loss == 'ssim_mse':
+    image_loss_func = vxm_losses.SSIM_MSE().loss
 else:
     raise ValueError('Image loss should be "mse" or "ncc", but found "%s"' % args.image_loss)
 
@@ -181,7 +197,11 @@ else:
 losses += [vxm_losses.Grad('l2', loss_mult=args.int_downsize).loss]
 weights += [args.weight]
 
+
+
 # training loops
+all_epoch_total_loss = [] #<<<<
+all_lr = [] #<<<<
 for epoch in range(args.initial_epoch, args.epochs):
 
     # save model checkpoint
@@ -220,6 +240,10 @@ for epoch in range(args.initial_epoch, args.epochs):
         loss.backward()
         optimizer.step()
 
+        # step the cyclic learning rate scheduler after optimizer step
+        # scheduler.step()
+        # all_lr.append(optimizer.param_groups[0]['lr'])
+
         # get compute time
         epoch_step_time.append(time.time() - step_start_time)
 
@@ -229,10 +253,17 @@ for epoch in range(args.initial_epoch, args.epochs):
     losses_info = ', '.join(['%.4e' % f for f in np.mean(epoch_loss, axis=0)])
     loss_info = 'loss: %.4e  (%s)' % (np.mean(epoch_total_loss), losses_info)
     print(' - '.join((epoch_info, time_info, loss_info)), flush=True)
-
+    all_epoch_total_loss.append(np.mean(epoch_total_loss)) #<<<<
 # final model save
 # only weights: '%04d.pt' % args.epochs
 # the whole model: model_full
 # torch.save(model.state_dict(), os.path.join(model_dir,'%04d.pt' % args.epochs))
 torch.save(model, os.path.join(model_dir, 'model_full.pt'))
 
+with open(os.path.join(model_dir, 'loss_history.txt'), 'w') as f:   #<<<<<
+    for loss in all_epoch_total_loss:
+        f.write(f"{loss}\n")
+
+with open(os.path.join(model_dir, 'lr_history.txt'), 'w') as f:    #<<<<<
+    for lr in all_lr:
+        f.write(f"{lr}\n")
