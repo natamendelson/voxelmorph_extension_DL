@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
+
 class NCC:
     """
     Local (over window) normalized cross correlation loss.
@@ -136,3 +137,132 @@ class Grad:
             grad *= self.loss_mult
 
         return grad.mean()
+
+
+# class SSIM:
+#     """
+#     Structural Similarity Index Measure (SSIM) Loss for 3D volumes.
+#     """
+#     def __init__(self, win_size=3, C1=0.01*2, C2=0.03*2):
+#         self.win_size = win_size
+#         self.C1 = C1
+#         self.C2 = C2
+    
+#     @staticmethod
+#     def gaussian_kernel_1d(size, sigma=1.0):
+#         coords = torch.arange(size).float() - size // 2
+#         g = torch.exp(-(coords*2) / (2 * sigma*2))
+#         return g / g.sum()
+#     gauss_1d = self.gaussian_kernel_1d(self.win_size).to(y_true.device)
+    
+#     def loss(self, y_true, y_pred):
+#         # Gaussian kernel
+#         print("[SSIM] Starting loss comutation")
+#         ndims = len(list(y_true.size())) - 2
+#         pad = self.win_size // 2
+#         channels = y_true.size(1)
+#         print(f"[SSIM] ndims={ndims}, pad={pad}, channels{channels}")
+        
+#         # sigma = 1.5
+    
+#         # def gaussian_jernel_1d(size, sigma=1.0):
+#         #     coords = torch.aragne(size).float() - size//2
+#         #     g = torch.exp(-(coords**2) / (2 * sigma**2))
+#         #     return g / g.sum()
+        
+#         # gauss_1d = gaussian_kernel_1d(self.win_size).to(y_true.device)
+    
+        
+#         if ndims == 3:
+#             kernel = gauss_1d[:, None, None] * gauss_1d[None, :, None] * gauss_1d[None, None, :]
+#             kernel = kernel.unsqueeze(0).unsqueeze(0)  # [1,1,D,H,W]
+#         else:
+#             raise ValueError("SSIM implemented here only for 3D volumes")
+
+#         kernel = kernel.repeat(channels, 1, 1, 1, 1)  # שכפול לערוצים
+#         # print("[SSIM] kernel repeated for channels")
+
+#         conv = torch.nn.functional.conv3d
+
+#         mu_x = conv(y_true, kernel, padding=pad, groups=channels)
+#         # print("[SSIM mu_x computed]")
+#         mu_y = conv(y_pred, kernel, padding=pad, groups=channels)
+#         # print("[SSIM nu_y computed]")
+
+
+#         mu_x2 = mu_x**2
+#         mu_y2 = mu_y**2
+#         mu_xy = mu_x * mu_y
+#         # print("[SSIM] nu_x^2, nu_y^2, mu_x*nu_y computed")
+
+
+#         sigma_x2 = conv(y_true * y_true, kernel, padding=pad, groups=channels) - mu_x2
+#         # print("[SSIM] sigma_x2 computed")
+#         sigma_y2 = conv(y_pred * y_pred, kernel, padding=pad, groups=channels) - mu_y2
+#         # print("[SSIM] sigma_y2 computed")
+#         sigma_xy = conv(y_true * y_pred, kernel, padding=pad, groups=channels) - mu_xy
+#         # print("[SSIM] sigma_xy computed")
+#         ssim_map = ((2 * mu_xy + self.C1) * (2 * sigma_xy + self.C2)) / \
+#                    ((mu_x2 + mu_y2 + self.C1) * (sigma_x2 + sigma_y2 + self.C2))
+#         # print("[SSIM] ssim_map compute]")
+#         return 1 -ssim_map.mean()
+
+import torch
+import torch.nn.functional as F
+
+class SSIM:
+    """
+    Structural Similarity Index Measure (SSIM) Loss for 3D volumes with small kernel (3x3x3).
+    """
+    def __init__(self, win_size=5, C1=0.01*2, C2=0.03*2):
+        self.win_size = win_size
+        self.C1 = C1
+        self.C2 = C2
+
+    def loss(self, y_true, y_pred):
+        ndims = len(list(y_true.size())) - 2
+        if ndims != 3:
+            raise ValueError("SSIM implemented only for 3D volumes")
+
+        pad = self.win_size // 2
+        channels = y_true.size(1)
+
+        # Gaussian kernel 1D
+        def gaussian_kernel_1d(size, sigma=1.0):
+            coords = torch.arange(size).float() - size // 2
+            g = torch.exp(-(coords*2) / (2 * sigma*2))
+            return g / g.sum()
+
+        gauss_1d = gaussian_kernel_1d(self.win_size).to(y_true.device)
+
+        # 3D kernel
+        kernel = gauss_1d[:, None, None] * gauss_1d[None, :, None] * gauss_1d[None, None, :]
+        kernel = kernel.unsqueeze(0).unsqueeze(0)  # [1,1,D,H,W]
+        kernel = kernel.repeat(channels, 1, 1, 1, 1)  # repeat for all channels
+
+        conv = F.conv3d
+
+        mu_x = conv(y_true, kernel, padding=pad, groups=channels)
+        mu_y = conv(y_pred, kernel, padding=pad, groups=channels)
+
+        mu_x2 = mu_x ** 2
+        mu_y2 = mu_y ** 2
+        mu_xy = mu_x * mu_y
+
+        sigma_x2 = conv(y_true * y_true, kernel, padding=pad, groups=channels) - mu_x2
+        sigma_y2 = conv(y_pred * y_pred, kernel, padding=pad, groups=channels) - mu_y2
+        sigma_xy = conv(y_true * y_pred, kernel, padding=pad, groups=channels) - mu_xy
+
+        ssim_map = ((2 * mu_xy + self.C1) * (2 * sigma_xy + self.C2)) / \
+                   ((mu_x2 + mu_y2 + self.C1) * (sigma_x2 + sigma_y2 + self.C2))
+
+        return 1 -ssim_map.mean()
+    
+
+class SSIM_MSE():
+    def __init__(self):
+        self.mse = MSE()
+        self.ssim = SSIM()
+
+    def loss(self,  y_true, y_pred):
+        return 0.5 * self.mse.loss(y_true, y_pred) + 0.5 * self.ssim.loss(y_true, y_pred) 

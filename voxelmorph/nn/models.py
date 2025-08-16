@@ -18,6 +18,8 @@ import voxelmorph as vxm
 from neurite.nn import modules
 from neurite.nn import models
 
+# new model
+from .custom_unet import CustomUNet
 
 class VxmDeformable(nn.Module):
     """
@@ -84,6 +86,7 @@ class VxmDeformable(nn.Module):
         integration_steps: int = 0,
         resize_integrated_fields: bool = False,
         device: str = "cuda",
+        bottle_neck_flag: bool = False
     ):
 
         """
@@ -136,11 +139,24 @@ class VxmDeformable(nn.Module):
 
         # Set derived attrs
         self._init_flow_layer(ndim, out_channels, flow_initializer)
-        self.model = models.BasicUNet(
+        # self.model = models.BasicUNet(
+        #     ndim=ndim, in_channels=in_channels, out_channels=out_channels, nb_features=nb_features,
+        #     normalizations=normalizations, activations=activations, order=order,
+        #     final_activation=final_activation
+        # )
+
+        # from .attention_unet import AttentionUNet
+        # self.model = AttentionUNet(
+        #     ndim=ndim, in_channels=in_channels, out_channels=out_channels, nb_features=nb_features,
+        #     normalizations=normalizations, activations=activations, order=order,
+        #     final_activation=final_activation)
+
+        self.model = CustomUNet(
             ndim=ndim, in_channels=in_channels, out_channels=out_channels, nb_features=nb_features,
             normalizations=normalizations, activations=activations, order=order,
-            final_activation=final_activation
+            final_activation=final_activation, use_bottleneck_attention=False, use_skip_attention=False,
         )
+        self.bottle_neck = bottle_neck_flag
 
     def forward(
         self,
@@ -190,8 +206,11 @@ class VxmDeformable(nn.Module):
         # Concat the source and target along channel dimension
         combined_features = torch.cat([source, target], dim=1)
 
-        # Pass combined features through the model's backbone
         combined_features = self.model(combined_features)
+
+
+        # Pass combined features through the model's backbone
+        # combined_features = self.model(combined_features)
 
         # Apply flow layer to get the positive flow field `pos_flow`
         pos_flow = self.flow_layer(combined_features)
