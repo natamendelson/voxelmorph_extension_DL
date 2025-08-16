@@ -100,16 +100,7 @@ This section explains how to run the code and the purpose of each file.
     - `save_normalized(input_path)` normalizes a volume and saves it to a `normalized/` subdirectory.  
 
   - **Add Gaussian Noise (`add_noise.py`):**  
-  - Contains a utility function `add_gaussian_noise()` to inject Gaussian noise into image tensors during preprocessing or data augmentation.  
-
-## Requirements
-
-- Python 3.10+
-- PyTorch
-- Numpy
-- Matplotlib
-- Voxelmorph (PyTorch backend)
-- Other dependencies as listed in `requirements.txt`
+  - Contains a utility function `add_gaussian_noise()` to inject Gaussian noise into image tensors during preprocessing or data augmentation. 
 
 ## Usage
 
@@ -140,6 +131,7 @@ This section explains how to run the code and the purpose of each file.
 - The final model is saved as `models/{number of epochs}.pt`.  
 
 - Intermediate checkpoints are saved every 20 epochs.
+
 
 
 
