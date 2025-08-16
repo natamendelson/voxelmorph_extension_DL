@@ -40,16 +40,16 @@ This fork introduces several modifications and enhancements to the original Voxe
 This section explains how to run the code and the purpose of each file.
 
 ### Loading the data
-- **File:** `load_data.ipynb`  
+- **File:** `extention/load_data.ipynb`  
 - **Purpose:** This notebook is used to download the data that we used in our project.
 
 ### Training the Model
-- **File:** `train_our_model.ipynb`  
+- **File:** `extention/train_our_model.ipynb`  
 - **Purpose:** This notebook is used to start and run the training of the models.  
 
 ### Testing and Evaluation
 
-- **File:** `test.ipynb`  
+- **File:** `extention/test.ipynb`  
 - **Purpose:** This script allows you to evaluate the trained models both quantitatively and qualitatively.  
 - **Features:**  
   - Compute metrics such as MSE before and after registration.  
@@ -79,14 +79,14 @@ This section explains how to run the code and the purpose of each file.
   - Switched architecture to `CustomUNet`.  
   - Added flags for enabling **bottleneck attention** and/or **skip connection attention**.  
 
-- **Registration Script (`register.py`):**  
+- **Registration Script (`voxelmorph/nn/register.py`):**  
   - Updated model instantiation to:  
     ```python
     model = vxm_models.VxmDeformable(...)
     ```  
   - Compatible with new loss functions and attention configurations.
 
-- **Utility Functions (`useful_functions.py`):**  
+- **Utility Functions (`voxelmorph/nn/useful_functions.py`):**  
   - **Normalization:** `normalize(x)` scales volumes to the range `[0, 1]`.  
   - **Visualization:**  
     - `show(im, title=None)` displays three orthogonal slices from a 3D volume.  
@@ -136,4 +136,5 @@ This section explains how to run the code and the purpose of each file.
 ### Model Saving
 
 - The final model is saved as `models/{number of epochs}.pt`.  
+
 - Intermediate checkpoints are saved every 20 epochs.
