@@ -2,9 +2,9 @@
 
 This repository contains a modified version of **VoxelMorph**, a deep learning framework for deformable medical image registration. VoxelMorph leverages convolutional neural networks to learn a mapping between moving and fixed images, enabling fast and accurate registration without the need for iterative optimization at inference time. Our extension to the original network includes changing the loss function and provides an option to modify the model by incorporating attention mechanisms either as skip connections or as an additional learning layer in the bottleneck region of the U-Net. Additionally, cyclical learning rate is optional and should be adjusted according to the specific dataset.
 
-<img src="data/output.png" alt="Logo" width="200"/>
+<img src="data/output.png" alt="Logo" width="400"/>
 
-<img src="data/ssim.png" alt="Logo" width="200"/>
+<img src="data/ssim.png" alt="Logo" width="400"/>
 
 
 ## Original VoxelMorph
@@ -138,3 +138,4 @@ This section explains how to run the code and the purpose of each file.
 - The final model is saved as `models/{number of epochs}.pt`.  
 
 - Intermediate checkpoints are saved every 20 epochs.
+
