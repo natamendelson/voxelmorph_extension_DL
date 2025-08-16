@@ -40,16 +40,16 @@ This fork introduces several modifications and enhancements to the original Voxe
 This section explains how to run the code and the purpose of each file.
 
 ### Loading the data
-- **File:** `extention/load_data.ipynb`  
+- **File:** `extension/load_data.ipynb`  
 - **Purpose:** This notebook is used to download the data that we used in our project.
 
 ### Training the Model
-- **File:** `extention/train_our_model.ipynb`  
+- **File:** `extension/train_our_model.ipynb`  
 - **Purpose:** This notebook is used to start and run the training of the models.  
 
 ### Testing and Evaluation
 
-- **File:** `extention/test.ipynb`  
+- **File:** `extension/test.ipynb`  
 - **Purpose:** This script allows you to evaluate the trained models both quantitatively and qualitatively.  
 - **Features:**  
   - Compute metrics such as MSE before and after registration.  
@@ -138,4 +138,5 @@ This section explains how to run the code and the purpose of each file.
 - The final model is saved as `models/{number of epochs}.pt`.  
 
 - Intermediate checkpoints are saved every 20 epochs.
+
 
