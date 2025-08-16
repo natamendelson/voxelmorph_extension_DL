@@ -13,7 +13,7 @@ VoxelMorph is introduced in the following paper:
 
 - **VoxelMorph: A Learning Framework for Deformable Medical Image Registration**  
   G. Balakrishnan, A. Zhao, M. R. Sabuncu, J. Guttag, A.V. Dalca. IEEE Transactions on Medical Imaging, 2019.
-- Link to original git repo: [VoxelmMorph](https://github.com/voxelmorph/voxelmorph)
+- Link to original git repo: [VoxelMorph](https://github.com/voxelmorph/voxelmorph)
 
 
 
@@ -140,6 +140,7 @@ This section explains how to run the code and the purpose of each file.
 - The final model is saved as `models/{number of epochs}.pt`.  
 
 - Intermediate checkpoints are saved every 20 epochs.
+
 
 
 
